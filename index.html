@@ -1,0 +1,1189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cat Girls for Impact Timer</title>
+<meta name="description" content="A cute Pomodoro timer that works offline.">
+<meta name="theme-color" content="#e3d6ff">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Cat Girls">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<style>
+  :root {
+    --ink: #38305a;
+    --ink-soft: rgba(56, 48, 90, .64);
+    --card: rgba(255, 255, 255, .7);
+    --card-solid: #fbf9ff;
+    --accent: #7a5fd0;
+    --on-accent: #fff;
+    --track: rgba(56, 48, 90, .1);
+    --chip: rgba(56, 48, 90, .07);
+    --shadow: 0 18px 50px rgba(80, 60, 150, .2);
+    --font: ui-rounded, "SF Pro Rounded", "Hiragino Maru Gothic ProN", "Arial Rounded MT Bold",
+      "Nunito", "Quicksand", "Segoe UI", system-ui, sans-serif;
+  }
+  body[data-theme="grape"]      { --accent: #6a4cc4; --card: rgba(255, 255, 255, .76); --shadow: 0 18px 50px rgba(50, 30, 120, .3); }
+  body[data-theme="peach"]      { --accent: #f2615a; --ink: #46302f; --ink-soft: rgba(70, 48, 47, .62); --shadow: 0 18px 50px rgba(120, 60, 40, .18); }
+  body[data-theme="strawberry"] { --accent: #e8517f; --ink: #4a2a36; --ink-soft: rgba(74, 42, 54, .62); }
+  body[data-theme="matcha"]     { --accent: #4c9a67; --ink: #2f4034; --ink-soft: rgba(47, 64, 52, .64); --shadow: 0 18px 50px rgba(50, 90, 60, .18); }
+  body[data-theme="sky"]        { --accent: #3486d6; --ink: #25405c; --ink-soft: rgba(37, 64, 92, .64); --shadow: 0 18px 50px rgba(40, 90, 150, .18); }
+  body[data-theme="sunset"]     { --accent: #e5507c; --ink: #4a2a3c; --ink-soft: rgba(74, 42, 60, .64); }
+  body[data-theme="gingham"]    { --card: rgba(255, 255, 255, .84); }
+  body[data-theme="photo"]      { --card: rgba(255, 255, 255, .78); --shadow: 0 18px 50px rgba(0, 0, 0, .28); }
+  body[data-theme="night"] {
+    --ink: #f3efff;
+    --ink-soft: rgba(243, 239, 255, .68);
+    --card: rgba(34, 31, 78, .62);
+    --card-solid: #26235a;
+    --accent: #c9b6ff;
+    --on-accent: #2a2158;
+    --track: rgba(255, 255, 255, .14);
+    --chip: rgba(255, 255, 255, .1);
+    --shadow: 0 18px 50px rgba(0, 0, 0, .4);
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: var(--font);
+    color: var(--ink);
+    background: #e3d6ff;
+    overflow: hidden;
+    overscroll-behavior: none;
+    -webkit-user-select: none; user-select: none;
+    -webkit-font-smoothing: antialiased;
+  }
+  button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; touch-action: manipulation; }
+  button:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+  [hidden] { display: none !important; }
+
+  /* ---------- backgrounds ---------- */
+  .bg { position: fixed; inset: 0; z-index: 0; transition: opacity .3s; }
+  .bg-peach { background: linear-gradient(160deg, #fff3e8 0%, #ffd9c4 55%, #ffb9a8 100%); }
+  .bg-strawberry {
+    background-color: #ffcfdc;
+    background-image:
+      radial-gradient(circle, rgba(255,255,255,.8) 7px, transparent 8px),
+      radial-gradient(circle, rgba(255,255,255,.8) 7px, transparent 8px);
+    background-size: 48px 48px;
+    background-position: 0 0, 24px 24px;
+  }
+  .bg-matcha { background: linear-gradient(165deg, #f3f9e6 0%, #d2eac4 55%, #a8d6a6 100%); }
+  .bg-sky {
+    background:
+      radial-gradient(ellipse 34px 26px at calc(18% - 18px) calc(15% - 14px), #fff 98%, transparent 100%),
+      radial-gradient(ellipse 30px 22px at calc(18% + 22px) calc(15% - 8px), #fff 98%, transparent 100%),
+      radial-gradient(ellipse 70px 20px at 18% 15%, #fff 98%, transparent 100%),
+      radial-gradient(ellipse 30px 24px at calc(80% - 12px) calc(34% - 12px), rgba(255,255,255,.9) 98%, transparent 100%),
+      radial-gradient(ellipse 60px 18px at 80% 34%, rgba(255,255,255,.9) 98%, transparent 100%),
+      radial-gradient(ellipse 38px 28px at calc(30% + 10px) calc(84% - 16px), rgba(255,255,255,.85) 98%, transparent 100%),
+      radial-gradient(ellipse 30px 20px at calc(30% - 30px) calc(84% - 8px), rgba(255,255,255,.85) 98%, transparent 100%),
+      radial-gradient(ellipse 80px 22px at 30% 84%, rgba(255,255,255,.85) 98%, transparent 100%),
+      linear-gradient(180deg, #9fd6ff 0%, #d9f0ff 100%);
+  }
+  .bg-lavender { background: linear-gradient(160deg, #f6f0ff 0%, #dccdff 55%, #bfaef5 100%); }
+  .bg-grape {
+    background:
+      radial-gradient(circle at 18% 12%, rgba(255, 200, 240, .55) 0, transparent 42%),
+      radial-gradient(circle at 88% 88%, rgba(140, 200, 255, .45) 0, transparent 46%),
+      linear-gradient(160deg, #cdb6ff 0%, #a183f0 55%, #7c5bd8 100%);
+  }
+  .bg-sunset { background: linear-gradient(180deg, #ffc39a 0%, #ff97a6 50%, #b796ff 100%); }
+  .bg-gingham {
+    background-color: #fbf8ff;
+    background-image:
+      linear-gradient(90deg, rgba(150, 115, 235, .3) 50%, transparent 50%),
+      linear-gradient(rgba(150, 115, 235, .3) 50%, transparent 50%);
+    background-size: 56px 56px;
+  }
+  .bg-night {
+    background-color: #1d1b3f;
+    background-image:
+      radial-gradient(circle at calc(100% - 64px) 96px, #fff4cf 26px, transparent 27px),
+      radial-gradient(circle at 20px 30px, #fff 1.2px, transparent 2px),
+      radial-gradient(circle at 96px 112px, rgba(255,255,255,.8) 1px, transparent 1.8px),
+      radial-gradient(circle at 150px 58px, #ffe9a8 1.4px, transparent 2.2px),
+      radial-gradient(circle at 60px 172px, rgba(255,255,255,.7) 1px, transparent 1.8px),
+      linear-gradient(180deg, #1a193b 0%, #3b2f6c 100%);
+    background-size: 100% 100%, 200px 200px, 200px 200px, 200px 200px, 200px 200px, 100% 100%;
+    background-repeat: no-repeat, repeat, repeat, repeat, repeat, no-repeat;
+  }
+  .bg-photo { background-color: #3a3336; background-size: cover; background-position: center; }
+
+  /* moving effects: float over the background and drift across the timer, never blocking taps */
+  #fx { position: fixed; inset: 0; z-index: 2; width: 100%; height: 100%; pointer-events: none; }
+
+  /* soft shade behind the iPhone status bar when installed */
+  @media (display-mode: standalone) {
+    .bg::before {
+      content: ""; position: absolute; left: 0; right: 0; top: 0;
+      height: calc(env(safe-area-inset-top, 0px) + 10px);
+      background: linear-gradient(rgba(0, 0, 0, .2), transparent);
+    }
+  }
+
+  /* ---------- layout ---------- */
+  .app {
+    position: relative; z-index: 1;
+    height: 100vh; height: 100dvh;
+    max-width: 440px; margin: 0 auto;
+    padding:
+      calc(env(safe-area-inset-top, 0px) + 14px)
+      calc(env(safe-area-inset-right, 0px) + 16px)
+      calc(env(safe-area-inset-bottom, 0px) + 16px)
+      calc(env(safe-area-inset-left, 0px) + 16px);
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .top { display: flex; align-items: center; justify-content: space-between; }
+  .brand {
+    display: flex; align-items: center; gap: 8px; min-width: 0;
+    font-weight: 800; font-size: 15px; line-height: 1.15; white-space: nowrap;
+    padding: 7px 16px 7px 9px; border-radius: 999px;
+    background: var(--card);
+    -webkit-backdrop-filter: blur(16px) saturate(1.3); backdrop-filter: blur(16px) saturate(1.3);
+  }
+  .brand svg { width: 30px; height: 30px; flex-shrink: 0; color: var(--accent); }
+  .brand small { display: block; font-size: 11px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: var(--ink-soft); }
+  .cat { fill: currentColor; fill-opacity: .13; stroke: currentColor; stroke-width: 5.5; stroke-linejoin: round; stroke-linecap: round; }
+  .cat-line { fill: none; stroke: currentColor; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* the encouraging message shown when a timer finishes */
+  .cheer {
+    position: absolute; z-index: 3;
+    top: calc(env(safe-area-inset-top, 0px) + 72px);
+    left: calc(env(safe-area-inset-left, 0px) + 16px); right: calc(env(safe-area-inset-right, 0px) + 16px);
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 12px 14px 16px; border-radius: 24px;
+    background: var(--card-solid); box-shadow: 0 0 0 2.5px var(--accent), var(--shadow);
+    animation: drop .5s cubic-bezier(.2, 1.3, .4, 1);
+  }
+  .cheer svg { width: 34px; height: 34px; flex-shrink: 0; color: var(--accent); }
+  .cheer p { flex: 1; margin: 0; font-size: 16.5px; font-weight: 700; line-height: 1.35; -webkit-user-select: text; user-select: text; }
+  .cheer .by { display: block; margin-top: 4px; font-size: 13px; font-weight: 700; color: var(--ink-soft); }
+  .cheer .close-btn { flex-shrink: 0; }
+  @keyframes drop { from { opacity: 0; transform: translateY(-14px) scale(.96); } to { opacity: 1; transform: none; } }
+  .top-actions { display: flex; gap: 10px; }
+  .icon-btn {
+    width: 46px; height: 46px; border-radius: 50%;
+    display: grid; place-items: center;
+    background: var(--card);
+    -webkit-backdrop-filter: blur(16px) saturate(1.3); backdrop-filter: blur(16px) saturate(1.3);
+    transition: transform .12s;
+  }
+  .icon-btn:active { transform: scale(.92); }
+  .icon-btn svg { width: 22px; height: 22px; }
+  .icon-btn.soft { background: var(--chip); -webkit-backdrop-filter: none; backdrop-filter: none; width: 52px; height: 52px; }
+
+  .card {
+    flex: 0 1 auto; min-height: 0; margin-block: auto;
+    display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+    gap: clamp(12px, 3dvh, 26px);
+    padding: 18px 18px 24px;
+    border-radius: 36px;
+    background: var(--card);
+    -webkit-backdrop-filter: blur(22px) saturate(1.4); backdrop-filter: blur(22px) saturate(1.4);
+    box-shadow: var(--shadow);
+  }
+
+  .tabs {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
+    width: 100%; padding: 4px; border-radius: 999px; background: var(--chip);
+  }
+  .tabs button {
+    padding: 10px 4px; border-radius: 999px;
+    font-weight: 700; font-size: 14px; white-space: nowrap;
+    color: var(--ink-soft);
+    transition: background .2s, color .2s;
+  }
+  .tabs button[aria-selected="true"] { background: var(--accent); color: var(--on-accent); }
+
+  .ring-wrap {
+    position: relative;
+    width: min(100%, 300px, 44vh); width: min(100%, 300px, 44dvh);
+    aspect-ratio: 1; flex: 0 1 auto;
+  }
+  /* Starts at 12 o'clock and is mirrored, so the empty part grows clockwise like a clock hand. */
+  .ring { width: 100%; height: 100%; transform: scaleX(-1) rotate(-90deg); display: block; }
+  .ring circle { fill: none; stroke-width: 14; }
+  .ring .track { stroke: var(--track); }
+  .ring .prog { stroke: var(--accent); stroke-linecap: round; }
+  .ring-inner {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2px; padding-bottom: 6px;
+  }
+  .mascot { width: 29%; height: auto; overflow: visible; color: var(--accent); }
+  .time {
+    font-size: clamp(44px, 15vw, 66px); line-height: 1; font-weight: 800;
+    font-variant-numeric: tabular-nums; letter-spacing: -1px;
+  }
+  .status { font-size: 15px; font-weight: 600; color: var(--ink-soft); margin-top: 4px; }
+
+  .progress-row { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .dots { display: flex; gap: 10px; }
+  .dot { width: 20px; height: 20px; overflow: visible; opacity: .5; transition: opacity .3s, transform .3s; }
+  .dot path { fill: transparent; stroke: var(--accent); stroke-width: 11; stroke-linejoin: round; transition: fill .3s; }
+  .dot.done { opacity: 1; transform: scale(1.12); }
+  .dot.done path { fill: var(--accent); }
+  .today { font-size: 13.5px; font-weight: 600; color: var(--ink-soft); }
+
+  .controls { display: flex; align-items: center; justify-content: center; gap: 16px; width: 100%; }
+  .main-btn {
+    flex: 0 1 190px; height: 62px; border-radius: 999px;
+    background: var(--accent); color: var(--on-accent);
+    font-size: 21px; font-weight: 800; letter-spacing: .3px;
+    box-shadow: 0 8px 0 -2px rgba(0, 0, 0, .14), 0 10px 22px rgba(0, 0, 0, .12);
+    transition: transform .12s, box-shadow .12s;
+  }
+  .main-btn:active { transform: translateY(4px); box-shadow: 0 3px 0 -2px rgba(0, 0, 0, .14), 0 4px 10px rgba(0, 0, 0, .12); }
+
+  /* ---------- mascot ---------- */
+  /* One set of eyes per timer state: open (ready), focus (focus running), relaxed (break running), sleep (paused). */
+  .cat-whisker { fill: none; stroke: currentColor; stroke-width: 3.4; stroke-linecap: round; }
+  .mascot .eyes-focus, .mascot .eyes-relaxed, .mascot .eyes-sleep, .mascot .zzz { display: none; }
+  .mascot:not([data-mood="idle"]) .eyes-open { display: none; }
+  .mascot[data-mood="focus"] .eyes-focus { display: block; }
+  .mascot[data-mood="relaxed"] .eyes-relaxed { display: block; }
+  .mascot[data-mood="sleep"] .eyes-sleep, .mascot[data-mood="sleep"] .zzz { display: block; }
+  .mascot .eyes-open { transform-box: fill-box; transform-origin: center; animation: blink 4.6s infinite; }
+
+  /* Small movements that match the state. */
+  .mascot .face { transform-box: fill-box; transform-origin: 50% 90%; }
+  .mascot[data-mood="idle"] .face { animation: breathe 4s ease-in-out infinite; }
+  .mascot[data-mood="focus"] .face { animation: bob 2.8s ease-in-out infinite; }
+  .mascot[data-mood="relaxed"] .face { animation: sway 3.6s ease-in-out infinite; }
+  .mascot[data-mood="sleep"] .face { animation: breathe 5.5s ease-in-out infinite; }
+  .mascot .whisk { transform-box: fill-box; }
+  .mascot .whisk-l { transform-origin: 100% 50%; --dir: 1; }
+  .mascot .whisk-r { transform-origin: 0% 50%; --dir: -1; }
+  .mascot[data-mood="focus"] .whisk { animation: twitch 5s infinite; }
+  .mascot[data-mood="focus"] .whisk-r { animation-delay: .12s; }
+  .mascot .zzz { animation: float 2.4s ease-in-out infinite; }
+  @keyframes breathe { 50% { transform: scale(1.035); } }
+  @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2.5%); } }
+  @keyframes sway { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+  @keyframes twitch { 0%, 86%, 100% { transform: rotate(0); } 91% { transform: rotate(calc(var(--dir) * 7deg)); } 96% { transform: rotate(calc(var(--dir) * -3deg)); } }
+  @keyframes blink { 0%, 94%, 100% { transform: scaleY(1); } 97% { transform: scaleY(.1); } }
+  @keyframes float { 0%, 100% { opacity: .35; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-3px); } }
+  .pop { animation: pop .5s ease; }
+  @keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.06); } 100% { transform: scale(1); } }
+  @media (prefers-reduced-motion: reduce) {
+    .pop, .cheer { animation: none !important; }
+    .sheet { transition: none !important; }
+  }
+
+  /* ---------- sheets ---------- */
+  .backdrop {
+    position: fixed; inset: 0; z-index: 5; background: rgba(20, 10, 20, .32);
+    opacity: 0; pointer-events: none; transition: opacity .25s;
+  }
+  .backdrop.open { opacity: 1; pointer-events: auto; }
+  .sheet {
+    position: fixed; z-index: 6; left: 0; right: 0; bottom: 0; margin: 0 auto;
+    max-width: 460px; max-height: 86vh; max-height: 86dvh; overflow-y: auto;
+    -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+    padding: 10px 20px calc(env(safe-area-inset-bottom, 0px) + 22px);
+    border-radius: 30px 30px 0 0;
+    background: var(--card-solid); color: var(--ink);
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, .2);
+    transform: translateY(105%); visibility: hidden;
+    transition: transform .28s cubic-bezier(.2, .8, .2, 1), visibility 0s .28s;
+  }
+  .sheet.open { transform: none; visibility: visible; transition: transform .28s cubic-bezier(.2, .8, .2, 1); }
+  @media (min-width: 600px) { .sheet { bottom: 24px; border-radius: 30px; } }
+  .grabber { width: 42px; height: 5px; border-radius: 3px; background: var(--track); margin: 0 auto 8px; }
+  .sheet-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .sheet-head h2 { margin: 0; font-size: 21px; font-weight: 800; }
+  .close-btn { width: 38px; height: 38px; border-radius: 50%; background: var(--chip); display: grid; place-items: center; }
+  .close-btn svg { width: 18px; height: 18px; }
+
+  .swatches { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px 10px; }
+  .swatch { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--ink-soft); text-align: center; line-height: 1.2; }
+  .swatch .thumb {
+    position: relative; width: 100%; aspect-ratio: 1; border-radius: 18px; overflow: hidden;
+    box-shadow: 0 0 0 2px var(--track);
+    transition: box-shadow .2s, transform .12s;
+  }
+  .swatch:active .thumb { transform: scale(.95); }
+  .swatch .thumb > span { position: absolute; left: 0; top: 0; width: 300%; height: 300%; transform: scale(.3334); transform-origin: 0 0; }
+  .swatch[aria-pressed="true"] { color: var(--ink); }
+  .swatch[aria-pressed="true"] .thumb { box-shadow: 0 0 0 4px var(--accent); }
+  .thumb.empty { display: grid; place-items: center; background: var(--chip); }
+  .thumb.empty svg { width: 30px; height: 30px; opacity: .7; }
+  .sub { margin: 20px 0 10px; font-size: 16px; font-weight: 800; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    padding: 10px 16px; border-radius: 999px; background: var(--chip);
+    font-weight: 700; font-size: 14.5px; color: var(--ink-soft);
+    transition: background .2s, color .2s;
+  }
+  .chip[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+  .text-btn {
+    display: block; margin: 16px auto 0; padding: 10px 18px; border-radius: 999px;
+    background: var(--chip); font-weight: 700; font-size: 14.5px;
+  }
+
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--track); }
+  .row:last-of-type { border-bottom: 0; }
+  .row .label { font-weight: 700; font-size: 16px; }
+  .row .hint { display: block; font-weight: 500; font-size: 13px; color: var(--ink-soft); margin-top: 2px; }
+  .stepper { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .stepper button { width: 38px; height: 38px; border-radius: 50%; background: var(--chip); font-size: 22px; font-weight: 700; line-height: 1; }
+  .stepper button:active { background: var(--track); }
+  .stepper output { min-width: 62px; text-align: center; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .switch { position: relative; width: 54px; height: 32px; border-radius: 999px; background: var(--track); flex-shrink: 0; transition: background .2s; }
+  .switch::after {
+    content: ""; position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%;
+    background: #fff; box-shadow: 0 2px 5px rgba(0, 0, 0, .2); transition: transform .2s;
+  }
+  .switch[aria-checked="true"] { background: var(--accent); }
+  .switch[aria-checked="true"]::after { transform: translateX(22px); }
+  .note { margin: 14px 0 0; padding: 12px 14px; border-radius: 16px; background: var(--chip); font-size: 13.5px; font-weight: 600; line-height: 1.45; color: var(--ink-soft); }
+
+  .toast {
+    position: fixed; z-index: 9; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 28px);
+    transform: translateX(-50%); max-width: calc(100% - 40px);
+    padding: 12px 18px; border-radius: 999px;
+    background: rgba(40, 30, 40, .92); color: #fff; font-weight: 700; font-size: 14.5px; text-align: center;
+  }
+</style>
+</head>
+<body data-theme="lavender">
+<div class="bg bg-lavender" id="bg"></div>
+<canvas id="fx" aria-hidden="true"></canvas>
+
+<main class="app">
+  <header class="top">
+    <div class="brand">
+      <svg viewBox="0 0 100 100" aria-hidden="true">
+        <path class="cat" d="M20 46L18 16L40 30Q50 27 60 30L82 16L80 46C86 64 72 84 50 84C28 84 14 64 20 46Z"/>
+        <path class="cat-line" d="M38 47v8M62 47v8M44 63q3 4 6 0q3 4 6 0"/>
+        <path class="cat-whisker" d="M30 61L5 56M30 67L6 72M70 61L95 56M70 67L94 72"/>
+      </svg>
+      <span>Cat Girls for Impact<small>Timer</small></span>
+    </div>
+    <div class="top-actions">
+      <button class="icon-btn" id="openBg" aria-label="Change background">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="4"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="M4 17l5-5 4 4 2.5-2.5L20 18"/></svg>
+      </button>
+      <button class="icon-btn" id="openSettings" aria-label="Settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h9M18 7h2M4 17h2M11 17h9"/><circle cx="15.5" cy="7" r="2.5"/><circle cx="8.5" cy="17" r="2.5"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="cheer" id="cheer" role="status" hidden>
+    <svg viewBox="0 0 100 100" aria-hidden="true">
+      <path class="cat" d="M20 46L18 16L40 30Q50 27 60 30L82 16L80 46C86 64 72 84 50 84C28 84 14 64 20 46Z"/>
+      <path class="cat-line" d="M33 53q5-7 10 0M57 53q5-7 10 0M44 63q3 4 6 0q3 4 6 0"/>
+      <path class="cat-whisker" d="M30 61L5 56M30 67L6 72M70 61L95 56M70 67L94 72"/>
+    </svg>
+    <p><span id="cheerText"></span><span class="by" id="cheerBy" hidden></span></p>
+    <button class="close-btn" id="cheerClose" aria-label="Dismiss message">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true" style="width:18px;height:18px;color:var(--ink)"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+
+  <section class="card" id="card">
+    <div class="tabs" role="tablist" aria-label="Timer mode">
+      <button role="tab" data-mode="focus" aria-selected="true">Focus</button>
+      <button role="tab" data-mode="short" aria-selected="false">Short break</button>
+      <button role="tab" data-mode="long" aria-selected="false">Long break</button>
+    </div>
+
+    <div class="ring-wrap">
+      <svg class="ring" viewBox="0 0 300 300" aria-hidden="true">
+        <circle class="track" cx="150" cy="150" r="132"/>
+        <circle class="prog" id="prog" cx="150" cy="150" r="132"/>
+      </svg>
+      <div class="ring-inner">
+        <svg class="mascot" id="mascot" data-mood="idle" viewBox="0 0 100 100" aria-hidden="true">
+          <g class="face">
+            <path class="cat" d="M20 46L18 16L40 30Q50 27 60 30L82 16L80 46C86 64 72 84 50 84C28 84 14 64 20 46Z"/>
+            <path class="cat-whisker whisk whisk-l" d="M30 61L5 56M30 67L6 72"/>
+            <path class="cat-whisker whisk whisk-r" d="M70 61L95 56M70 67L94 72"/>
+            <path class="cat-line eyes-open" d="M38 47v8M62 47v8"/>
+            <path class="cat-line eyes-focus" d="M36 49.500L40 53.500M64 49.500L60 53.500"/>
+            <path class="cat-line eyes-relaxed" d="M33 51q5 3.500 10 0M57 51q5 3.500 10 0"/>
+            <path class="cat-line eyes-sleep" d="M33 50q5 5 10 0M57 50q5 5 10 0"/>
+            <path class="cat-line" d="M44 63q3 4 6 0q3 4 6 0"/>
+          </g>
+          <g class="zzz" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M98 -6h8l-8 9h8"/><path d="M90 8h5l-5 6h5" opacity=".7"/>
+          </g>
+        </svg>
+        <div class="time" id="time" role="timer">25:00</div>
+        <div class="status" id="status">Ready when you are</div>
+      </div>
+    </div>
+
+    <div class="progress-row">
+      <div class="dots" id="dots" role="img"></div>
+      <div class="today" id="today"></div>
+    </div>
+
+    <div class="controls">
+      <button class="icon-btn soft" id="reset" aria-label="Reset timer">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.6-5.9"/><path d="M4 4v4.5h4.5"/></svg>
+      </button>
+      <button class="main-btn" id="toggle">Start</button>
+      <button class="icon-btn soft" id="skip" aria-label="Skip to next">
+        <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l9 6-9 6z"/><path d="M19 6v12" fill="none"/></svg>
+      </button>
+    </div>
+  </section>
+</main>
+
+<div class="backdrop" id="backdrop"></div>
+
+<section class="sheet" id="bgSheet" role="dialog" aria-modal="true" aria-labelledby="bgTitle">
+  <div class="grabber"></div>
+  <div class="sheet-head">
+    <h2 id="bgTitle">Background</h2>
+    <button class="close-btn" data-close aria-label="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <div class="swatches" id="swatches"></div>
+  <button class="text-btn" id="changePhoto" hidden>Choose a different photo</button>
+  <h3 class="sub" id="fxTitle">Moving effect</h3>
+  <div class="chips" id="fxChips" role="group" aria-labelledby="fxTitle"></div>
+</section>
+
+<section class="sheet" id="settingsSheet" role="dialog" aria-modal="true" aria-labelledby="setTitle">
+  <div class="grabber"></div>
+  <div class="sheet-head">
+    <h2 id="setTitle">Settings</h2>
+    <button class="close-btn" data-close aria-label="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <div id="settingsRows"></div>
+  <p class="note" id="installNote" hidden>To use this timer offline on your iPhone, open this page in Safari, tap Share, then “Add to Home Screen”.</p>
+</section>
+
+<div class="toast" id="toast" role="status" hidden></div>
+<input type="file" id="photoInput" accept="image/*" hidden>
+
+<script>
+(() => {
+  'use strict';
+  const $ = (s) => document.querySelector(s);
+
+  // ---------- storage ----------
+  const store = {
+    get(key, fallback) {
+      try { const v = localStorage.getItem(key); return v == null ? fallback : JSON.parse(v); }
+      catch { return fallback; }
+    },
+    set(key, value) {
+      try { localStorage.setItem(key, JSON.stringify(value)); return true; }
+      catch { return false; }
+    },
+  };
+
+  const THEMES = [
+    ['lavender', 'Lavender', '#e3d6ff'],
+    ['grape', 'Grape soda', '#b59cf5'],
+    ['gingham', 'Lilac picnic', '#e2d6fa'],
+    ['night', 'Starry night', '#1d1b3f'],
+    ['strawberry', 'Strawberry', '#ffcfdc'],
+    ['sky', 'Cloudy sky', '#a9daff'],
+    ['sunset', 'Sunset', '#ffb39c'],
+    ['matcha', 'Matcha', '#dcefd0'],
+    ['peach', 'Peach', '#ffe1d2'],
+  ];
+  const HEART = 'M50 84C24 64 10 48 10 33C10 19 20 11 31 11C39 11 46 15 50 22C54 15 61 11 69 11C80 11 90 19 90 33C90 48 76 64 50 84Z';
+  const APP_NAME = 'Cat Girls for Impact Timer';
+
+  // Encouragement styles. `done` lines show after a focus session, `back` lines when a break ends.
+  // There is one style for now; more can be added here the same way.
+  const VOICES = [
+    ['cat', 'Cat girl', 'Pep talks for a cat girl, some kind and some a little harsh'],
+  ];
+  const LINES = {
+    cat: {
+      done: [
+        "That work matters to someone. Tail high, well done.",
+        "Small paws, big impact. That was a real step.",
+        "The world needs cat girls who show up. You just did.",
+        "Somewhere, someone is better off because you sat down and did that.",
+        "One session closer to the world you're working for.",
+        "Good intentions don't count until they're work. That was work.",
+        "Cats land on their feet. You just landed a whole session.",
+        "Big change is a long line of sessions like that one.",
+        "You picked the important thing over the easy thing. Ears up.",
+        "Impact isn't loud. Sometimes it's a cat girl and a timer.",
+        "One more paw print on something bigger than you.",
+        "The problem is big. You just made it a little smaller.",
+        "A cat girl who finishes things is a force. You finished one.",
+        "Future you says thanks. So do the people this helps.",
+        "Curiosity got you into this work. Keep following it.",
+        "Patient as a cat at a window. That's how hard problems get solved.",
+        "Nine lives would be nice. You're making this one count.",
+        "Whiskers forward. You're on the right track.",
+        "Tail up. That was time well spent.",
+        "The mission got a little closer. Stretch, then go again.",
+        "Cat girls for impact, one session at a time.",
+        "One cat girl can't do everything. One cat girl just did something.",
+        "Ears up, eyes forward. The work is working.",
+
+        "Session caught. Good hunt.",
+        "That was a clean pounce from start to finish.",
+        "You stayed on it like a cat on a warm laptop.",
+        "Purring is allowed. You earned it.",
+        "Sharp ears, steady paws. That was good work.",
+        "You knocked that one right off the table.",
+        "Stretch like you mean it. Front paws out, long and slow.",
+        "A cat girl with a plan is a dangerous thing. Well done.",
+        "You chased it down and you caught it.",
+        "Quiet paws, loud results.",
+        "Every cat girl needs a sunbeam. Go find yours for five minutes.",
+        "Claws in. Break time.",
+        "That's how a cat girl gets things done: one pounce at a time.",
+        "You held your focus like a cat holds a stare.",
+        "Landed on your feet again. Of course you did.",
+        "Tail high. You showed up and you finished.",
+        "You earned a treat. A real one.",
+        "Head pats. You earned every one.",
+        "Whiskers twitching, eyes bright. You're on a roll.",
+        "Nothing broke your focus. That's a hunter.",
+
+        "One session isn't the hunt. Rest, then go again.",
+        "Cats don't quit mid-pounce. Neither do you.",
+        "A nap is earned, not owed. You earned five minutes.",
+        "Tired? Good. That means it was real.",
+        "Nobody feeds a cat girl who won't hunt. Good thing you hunt.",
+        "You're not done. You're just between pounces.",
+        "Don't purr yet. There's more to catch.",
+        "Claws out was the right call. Keep them out.",
+        "Soft paws are fine. Soft effort isn't. That wasn't soft.",
+        "Comfortable cats get slow. Stay sharp.",
+        "Locked in. Claws out. Go again.",
+        "You've got this, and you've got more. Eyes on the prey.",
+        "The to-do list is still breathing. Finish it.",
+        "You didn't feel like hunting and hunted anyway. That's what makes a cat girl dangerous.",
+        "Five minutes. Then I want to see those ears forward again.",
+        "That session had teeth. Keep biting.",
+        "No scrolling on the break. Stretch like a cat, drink some water, back to the hunt.",
+
+        "A cat girl doesn't stop because it got hard. She stops when it's caught.",
+        "Ears back, eyes forward. You're not finished yet.",
+        "The hunt gets harder from here. Good. So do you.",
+        "Claws stay sharp by using them. Next round.",
+        "No cat girl ever caught anything from the couch. Break, then back.",
+        "That hurt a little? Good. Cat girls grow claws that way.",
+        "Hungry cats hunt best. Stay hungry.",
+        "Don't curl up yet. There's at least one more pounce in you.",
+        "A cat girl finishes what she stalks. You're not at the end yet.",
+        "Lick your paw, shake it off, go again.",
+        "The prey is tired too. Outlast it.",
+        "Cat girls don't wait for motivation. They pounce anyway.",
+        "Tail down is fine. Giving up isn't. Up again after the break.",
+        "You hissed at that task and it backed down. Do it to the next one.",
+        "No one's going to carry you by the scruff. Walk it yourself.",
+        "Sharp claws are earned in sessions like that. Earn more.",
+        "A tired cat girl who keeps going beats a rested one who never starts.",
+        "Purr later. Hunt now.",
+        "That was one mouse. The barn's still full.",
+        "Whiskers up. You're tougher than this task and you know it.",
+        "Cat girls land on their feet because they jump in the first place. Jump again.",
+      ],
+      back: [
+        "The work that matters is waiting. Ears up.",
+        "Stretch once more, then back to what counts.",
+        "Tail up. Let's get back to the real thing.",
+
+        "Ears forward. Next one.",
+        "Break's done. Claws out.",
+        "Off the sunbeam. The hunt's back on.",
+        "Paws on the keyboard. Go.",
+        "Stretch, yawn, pounce.",
+        "The prey won't catch itself.",
+        "Up you get. You know what to do.",
+        "Enough lounging. Show me that focus again.",
+        "Tail still, eyes sharp. Begin.",
+        "Back in. Same focus, more teeth.",
+        "A cat girl who starts is halfway there. Start.",
+
+        "Break's over, cat girl. On your paws.",
+        "Up. A cat girl doesn't hunt lying down.",
+        "Uncurl. It's time.",
+        "Claws out, cat girl. This one won't catch itself.",
+      ],
+    },
+  };
+  const textOf = (line) => (Array.isArray(line) ? line[0] : line);
+  // Lines shown lately are skipped, so the same one doesn't come round again too soon.
+  let recent = store.get('catgirls.recent', []);
+  if (!Array.isArray(recent)) recent = [];
+  function pickLine(kind, remember = true) {
+    const list = LINES.cat[kind];
+    const fresh = list.filter((line) => !recent.includes(textOf(line)));
+    const pool = fresh.length ? fresh : list;
+    const line = pool[Math.floor(Math.random() * pool.length)];
+    const picked = { text: textOf(line), by: Array.isArray(line) ? line[1] : '' };
+    if (remember) {
+      recent.push(picked.text);
+      recent = recent.slice(-40);
+      store.set('catgirls.recent', recent);
+    }
+    return picked;
+  }
+
+  const MODES = { focus: 'Focus', short: 'Short break', long: 'Long break' };
+  const LIMITS = { focus: [1, 90], short: [1, 30], long: [1, 60], every: [2, 8] };
+
+  const dayKey = () => { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); };
+  const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+
+  const FX = [['off', 'Off'], ['stars', 'Stars'], ['snow', 'Snow'], ['petals', 'Petals'], ['bubbles', 'Bubbles'], ['hearts', 'Hearts']];
+
+  const settings = Object.assign(
+    { focus: 25, short: 5, long: 15, every: 4, sound: true, auto: false, awake: true, notify: false, theme: 'lavender', fx: 'stars', cheer: true },
+    store.get('catgirls.settings', {})
+  );
+  const state = Object.assign(
+    { mode: 'focus', running: false, endAt: 0, remaining: null, cycle: 0, day: dayKey(), today: 0, cheer: '', cheerBy: '' },
+    store.get('catgirls.state', {})
+  );
+  if (!MODES[state.mode]) state.mode = 'focus';
+  let photo = store.get('catgirls.photo', null);
+
+  const saveSettings = () => store.set('catgirls.settings', settings);
+  const saveState = () => store.set('catgirls.state', state);
+
+  // ---------- timer ----------
+  const duration = (mode = state.mode) => settings[mode] * 60000;
+  const remaining = () => state.running
+    ? Math.max(0, state.endAt - Date.now())
+    : (state.remaining == null ? duration() : state.remaining);
+
+  function rollDay() {
+    if (state.day !== dayKey()) { state.day = dayKey(); state.today = 0; }
+  }
+
+  function start() {
+    unlockAudio();
+    state.endAt = Date.now() + remaining();
+    state.remaining = null;
+    state.running = true;
+    state.cheer = ''; state.cheerBy = '';
+    saveState(); syncWake(); render();
+  }
+  function pause() {
+    state.remaining = remaining();
+    state.running = false;
+    saveState(); syncWake(); render();
+  }
+  function reset() {
+    state.running = false; state.remaining = null;
+    saveState(); syncWake(); render();
+  }
+  function setMode(mode) {
+    if (mode === state.mode && !state.running && state.remaining == null) return;
+    state.mode = mode; state.running = false; state.remaining = null;
+    saveState(); syncWake(); render();
+  }
+  // Move to the next step. `finished` is true when the timer ran out, false when skipped.
+  function advance(finished) {
+    rollDay();
+    const was = state.mode;
+    if (was === 'focus') {
+      if (finished) { state.cycle += 1; state.today += 1; }
+      state.mode = state.cycle >= settings.every ? 'long' : 'short';
+    } else {
+      if (was === 'long') state.cycle = 0;
+      state.mode = 'focus';
+    }
+    state.remaining = null;
+    state.running = finished && settings.auto;
+    if (state.running) state.endAt = Date.now() + duration();
+    const line = finished && settings.cheer ? pickLine(was === 'focus' ? 'done' : 'back') : null;
+    state.cheer = line ? line.text : '';
+    state.cheerBy = line ? line.by : '';
+    if (finished) {
+      playMeow();
+      notify(was === 'focus' ? 'Focus session done' : 'Break is over',
+             line ? (line.by ? '“' + line.text + '” — ' + line.by : line.text)
+                  : (was === 'focus' ? 'Time for a ' + MODES[state.mode].toLowerCase() + '.' : 'Ready for another focus session?'));
+      const card = $('#card'); card.classList.remove('pop'); void card.offsetWidth; card.classList.add('pop');
+      const cheer = $('#cheer'); cheer.style.animation = 'none'; void cheer.offsetWidth; cheer.style.animation = '';
+    }
+    saveState(); syncWake(); render();
+  }
+  function tick() {
+    if (state.running && remaining() <= 0) advance(true);
+    else if (state.running) renderTime();
+  }
+
+  // ---------- rendering ----------
+  const RING = 2 * Math.PI * 132;
+  const el = {
+    time: $('#time'), status: $('#status'), prog: $('#prog'), toggle: $('#toggle'),
+    mascot: $('#mascot'), dots: $('#dots'), today: $('#today'), bg: $('#bg'),
+    cheer: $('#cheer'), cheerText: $('#cheerText'), cheerBy: $('#cheerBy'),
+  };
+  $('#cheerClose').addEventListener('click', () => { state.cheer = ''; state.cheerBy = ''; saveState(); render(); });
+  el.prog.style.strokeDasharray = RING;
+
+  function fmt(ms) {
+    const s = Math.ceil(ms / 1000);
+    return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+  }
+  function renderTime() {
+    const left = remaining();
+    const text = fmt(left);
+    if (el.time.textContent !== text) el.time.textContent = text;
+    const frac = Math.min(1, left / duration());
+    el.prog.style.strokeDashoffset = RING * (1 - frac);
+    document.title = (state.running || state.remaining != null) ? text + ' · ' + MODES[state.mode] : APP_NAME;
+  }
+  function render() {
+    rollDay();
+    renderTime();
+    const paused = !state.running && state.remaining != null;
+    document.querySelectorAll('.tabs button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.mode === state.mode)));
+    el.toggle.textContent = state.running ? 'Pause' : (paused ? 'Resume' : 'Start');
+    el.mascot.dataset.mood = state.running ? (state.mode === 'focus' ? 'focus' : 'relaxed') : (paused ? 'sleep' : 'idle');
+    el.status.textContent = paused ? 'Paused'
+      : state.mode === 'focus' ? (state.running ? 'Focus time' : 'Ready when you are')
+      : state.mode === 'short' ? (state.running ? 'Short break' : 'Time for a short break')
+      : (state.running ? 'Long break' : 'Time for a long break');
+
+    if (el.dots.children.length !== settings.every) {
+      el.dots.innerHTML = ('<svg class="dot" viewBox="0 0 100 100" aria-hidden="true"><path d="' + HEART + '"/></svg>').repeat(settings.every);
+    }
+    const filled = Math.min(state.cycle, settings.every);
+    [...el.dots.children].forEach((d, i) => d.classList.toggle('done', i < filled));
+    el.dots.setAttribute('aria-label', filled + ' of ' + settings.every + ' focus sessions until a long break');
+    const cheerText = !state.cheer ? '' : state.cheerBy ? '“' + state.cheer + '”' : state.cheer;
+    if (el.cheerText.textContent !== cheerText) el.cheerText.textContent = cheerText;
+    el.cheerBy.textContent = state.cheer && state.cheerBy ? '— ' + state.cheerBy : '';
+    el.cheerBy.hidden = !(state.cheer && state.cheerBy);
+    el.cheer.hidden = !state.cheer;
+    el.today.textContent = state.today === 0 ? 'No sessions yet today'
+      : state.today + (state.today === 1 ? ' session' : ' sessions') + ' done today';
+  }
+
+  // ---------- sound, notifications, screen wake ----------
+  let audio = null;
+  function unlockAudio() {
+    try {
+      audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+      if (audio.state === 'suspended') audio.resume();
+    } catch { /* no audio available */ }
+  }
+  // The sound when a timer finishes: a short synthesized kitten mew, so no sound file is
+  // needed offline. These four numbers are the whole recipe; change them to retune it.
+  const MEOW = {
+    pitch: 1500,   // highest note of the mew, in Hz
+    length: 0.3,   // seconds
+    soft: 0.85,    // 0 = buzzy, 1 = soft and round
+    twice: false,  // play it two times in a row
+  };
+  // One mew: the note chirps up to `pitch` and falls away, while a filter closes over it
+  // so the sound goes from a bright "ee" to a rounder "oo".
+  function meow(ctx, at, { pitch, length, soft }) {
+    const buzzy = ctx.createOscillator(), round = ctx.createOscillator();
+    buzzy.type = 'sawtooth'; round.type = 'triangle';
+    for (const osc of [buzzy, round]) {
+      osc.frequency.setValueAtTime(pitch * 0.75, at);
+      osc.frequency.linearRampToValueAtTime(pitch, at + length * 0.3);
+      osc.frequency.exponentialRampToValueAtTime(pitch * 0.62, at + length);
+    }
+    const buzzyLevel = ctx.createGain(), roundLevel = ctx.createGain();
+    buzzyLevel.gain.value = (1 - soft) * 0.5;
+    roundLevel.gain.value = soft;
+
+    const mouth = ctx.createBiquadFilter();
+    mouth.type = 'lowpass'; mouth.Q.value = 3;
+    mouth.frequency.setValueAtTime(pitch * 4, at);
+    mouth.frequency.exponentialRampToValueAtTime(pitch * 1.3, at + length);
+
+    const out = ctx.createGain();
+    out.gain.setValueAtTime(0.0001, at);
+    out.gain.exponentialRampToValueAtTime(0.5, at + 0.025);
+    out.gain.setValueAtTime(0.5, at + length * 0.45);
+    out.gain.linearRampToValueAtTime(0.0001, at + length);
+
+    buzzy.connect(buzzyLevel).connect(mouth);
+    round.connect(roundLevel).connect(mouth);
+    mouth.connect(out).connect(ctx.destination);
+    for (const osc of [buzzy, round]) { osc.start(at); osc.stop(at + length + 0.05); }
+  }
+  function playMeow() {
+    if (!settings.sound || !audio) return;
+    try {
+      if (audio.state === 'suspended') audio.resume();
+      const at = audio.currentTime + 0.05;
+      meow(audio, at, MEOW);
+      if (MEOW.twice) meow(audio, at + MEOW.length + 0.12, MEOW);
+    } catch { /* ignore */ }
+  }
+  async function notify(title, body) {
+    if (!settings.notify || !('Notification' in window) || Notification.permission !== 'granted' || !document.hidden) return;
+    try {
+      const reg = 'serviceWorker' in navigator ? await navigator.serviceWorker.getRegistration() : null;
+      const opts = { body, icon: 'icons/icon-192.png', tag: 'catgirls-timer' };
+      if (reg && reg.showNotification) await reg.showNotification(title, opts);
+      else new Notification(title, opts);
+    } catch { /* ignore */ }
+  }
+  let wake = null;
+  async function syncWake() {
+    if (!('wakeLock' in navigator)) return;
+    const want = settings.awake && state.running && document.visibilityState === 'visible';
+    try {
+      if (want && !wake) {
+        wake = await navigator.wakeLock.request('screen');
+        wake.addEventListener('release', () => { wake = null; });
+      } else if (!want && wake) {
+        const w = wake; wake = null; await w.release();
+      }
+    } catch { wake = null; }
+  }
+
+  // ---------- moving effects ----------
+  const fx = (() => {
+    const canvas = $('#fx'), ctx = canvas.getContext('2d');
+    const SPRITE = 96;
+    const rand = (a, b) => a + Math.random() * (b - a);
+    let W = 0, H = 0, dpr = 1, kind = 'off', parts = [], sprites = [], raf = 0, last = 0, clock = 0;
+
+    // Each little shape is painted once onto its own tiny canvas, then stamped many times.
+    function sprite(glow, blur, draw) {
+      const c = document.createElement('canvas'); c.width = c.height = SPRITE;
+      const x = c.getContext('2d');
+      x.translate(SPRITE / 2, SPRITE / 2);
+      x.shadowColor = glow; x.shadowBlur = blur;
+      draw(x, SPRITE / 2);
+      return c;
+    }
+    function makeSprites() {
+      const theme = document.body.dataset.theme;
+      const dark = theme === 'night';
+      const accent = getComputedStyle(document.body).getPropertyValue('--accent').trim() || '#7a5fd0';
+      // on pale backgrounds white shapes need a coloured glow to show up
+      const glow = dark ? 'rgba(255,255,255,.85)' : theme === 'photo' ? 'rgba(0,0,0,.45)' : accent;
+      const fill = (x, color) => { x.fillStyle = color; x.fill(); x.fill(); };
+
+      if (kind === 'snow') {
+        sprites = [0.34, 0.26].map((k) => sprite(glow, 14, (x, r) => {
+          x.beginPath(); x.arc(0, 0, r * k, 0, Math.PI * 2); fill(x, '#fff');
+        }));
+      } else if (kind === 'stars') {
+        const colors = dark ? ['#fff7d6', '#ffe08a', '#ffffff'] : ['#ffffff', '#fff1b8', '#ffffff'];
+        sprites = colors.map((color) => sprite(glow, 12, (x, r) => {
+          const R = r * 0.62;
+          x.beginPath(); x.moveTo(0, -R);
+          x.quadraticCurveTo(0, 0, R, 0); x.quadraticCurveTo(0, 0, 0, R);
+          x.quadraticCurveTo(0, 0, -R, 0); x.quadraticCurveTo(0, 0, 0, -R);
+          fill(x, color);
+        }));
+      } else if (kind === 'petals') {
+        sprites = ['#ffc2d4', '#ff9fbd', '#ffe6ee'].map((color) => sprite(dark ? 'rgba(255,190,210,.7)' : 'rgba(190,70,110,.45)', 8, (x, r) => {
+          const R = r * 0.66;
+          x.beginPath(); x.moveTo(0, -R);
+          x.bezierCurveTo(R * 0.95, -R * 0.5, R * 0.6, R * 0.75, 0, R);
+          x.bezierCurveTo(-R * 0.6, R * 0.75, -R * 0.95, -R * 0.5, 0, -R);
+          fill(x, color);
+        }));
+      } else if (kind === 'bubbles') {
+        sprites = [sprite(glow, 10, (x, r) => {
+          const R = r * 0.62;
+          x.beginPath(); x.arc(0, 0, R, 0, Math.PI * 2);
+          x.fillStyle = 'rgba(255,255,255,.2)'; x.fill();
+          x.lineWidth = 3.5; x.strokeStyle = 'rgba(255,255,255,.95)'; x.stroke();
+          x.shadowBlur = 0; x.lineWidth = 4; x.lineCap = 'round';
+          x.beginPath(); x.arc(0, 0, R * 0.62, Math.PI * 1.12, Math.PI * 1.42); x.stroke();
+        })];
+      } else if (kind === 'hearts') {
+        sprites = ['#b79dff', '#ff9fd0', '#ffffff'].map((color) => sprite(dark ? 'rgba(255,170,200,.8)' : glow, 10, (x, r) => {
+          const R = r * 0.56;
+          x.beginPath(); x.moveTo(0, R * 0.8);
+          x.bezierCurveTo(-R * 1.3, -R * 0.1, -R * 0.62, -R, 0, -R * 0.38);
+          x.bezierCurveTo(R * 0.62, -R, R * 1.3, -R * 0.1, 0, R * 0.8);
+          fill(x, color);
+        }));
+      } else {
+        sprites = [];
+      }
+      parts.forEach((p) => { p.s = sprites[p.i % sprites.length]; });
+    }
+
+    function spawn(p, first) {
+      p.i = (Math.random() * 12) | 0;
+      p.s = sprites[p.i % sprites.length];
+      p.ph = rand(0, 6.28); p.rot = 0; p.vr = 0; p.sway = 0; p.a = 1; p.tw = 1; p.fl = 1;
+      if (kind === 'snow')         { p.size = rand(16, 40); p.vy = 10 + p.size * rand(0.7, 1.1); p.vx = rand(-5, 5); p.sway = rand(8, 22); p.a = rand(0.65, 1); }
+      else if (kind === 'stars')   { p.size = rand(18, 46); p.vy = -rand(2, 8); p.vx = rand(-3, 3); p.tw = rand(0.7, 1.9); p.vr = rand(-0.25, 0.25); }
+      else if (kind === 'petals')  { p.size = rand(22, 38); p.vy = rand(24, 46); p.vx = rand(6, 20); p.sway = rand(14, 30); p.rot = rand(0, 6.28); p.vr = rand(-1, 1); p.fl = rand(0.8, 2); p.a = rand(0.8, 1); }
+      else if (kind === 'bubbles') { p.size = rand(22, 58); p.vy = -rand(14, 36); p.vx = rand(-4, 4); p.sway = rand(6, 16); p.a = rand(0.55, 0.95); }
+      else                         { p.size = rand(22, 44); p.vy = -rand(12, 28); p.vx = rand(-4, 4); p.sway = rand(8, 18); p.a = rand(0.6, 0.95); }
+      p.x = rand(0, W);
+      p.y = first ? rand(0, H) : (p.vy > 0 ? -p.size : H + p.size);
+      return p;
+    }
+
+    function resize() {
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      W = window.innerWidth; H = window.innerHeight;
+      canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+      if (kind === 'off') return;
+      const want = Math.round(Math.min(70, Math.max(16, (W * H) / 15000)));
+      while (parts.length < want) parts.push(spawn({}, true));
+      parts.length = want;
+    }
+
+    function frame(now) {
+      raf = requestAnimationFrame(frame);
+      const dt = Math.min(0.05, (now - last) / 1000 || 0);
+      last = now; clock += dt;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (const p of parts) {
+        p.y += p.vy * dt;
+        p.x += (p.vx + Math.cos(clock * 0.8 + p.ph) * p.sway) * dt;
+        p.rot += p.vr * dt;
+        if ((p.vy > 0 && p.y > H + p.size) || (p.vy < 0 && p.y < -p.size)) spawn(p, false);
+        if (p.x < -p.size) p.x = W + p.size; else if (p.x > W + p.size) p.x = -p.size;
+
+        let alpha = p.a, sx = 1, sy = 1, rot = p.rot;
+        if (kind === 'stars') { const t = 0.5 + 0.5 * Math.sin(clock * p.tw + p.ph); alpha = 0.12 + 0.88 * t; sx = sy = 0.55 + 0.45 * t; }
+        else if (kind === 'petals') sx = Math.cos(clock * p.fl + p.ph);
+        else if (kind === 'hearts') rot = Math.sin(clock * 0.9 + p.ph) * 0.28;
+        else if (kind === 'bubbles') { sx = 1 + Math.sin(clock * 1.6 + p.ph) * 0.04; sy = 2 - sx; }
+
+        ctx.setTransform(dpr, 0, 0, dpr, p.x * dpr, p.y * dpr);
+        if (rot) ctx.rotate(rot);
+        if (sx !== 1 || sy !== 1) ctx.scale(sx, sy);
+        ctx.globalAlpha = alpha;
+        ctx.drawImage(p.s, -p.size / 2, -p.size / 2, p.size, p.size);
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    function set(next) {
+      kind = FX.some((f) => f[0] === next) ? next : 'off';
+      cancelAnimationFrame(raf); raf = 0; parts = [];
+      makeSprites();
+      resize();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (kind !== 'off') { last = performance.now(); raf = requestAnimationFrame(frame); }
+    }
+    window.addEventListener('resize', resize);
+    return { set, restyle: makeSprites };
+  })();
+
+  // ---------- backgrounds ----------
+  function applyTheme() {
+    let id = settings.theme;
+    if (id === 'photo' && !photo) id = 'lavender';
+    if (id !== 'photo' && !THEMES.some((t) => t[0] === id)) id = 'lavender';
+    document.body.dataset.theme = id;
+    el.bg.className = 'bg bg-' + id;
+    el.bg.style.backgroundImage = id === 'photo' ? 'url("' + photo + '")' : '';
+    const color = id === 'photo' ? '#3a3336' : THEMES.find((t) => t[0] === id)[2];
+    document.querySelector('meta[name="theme-color"]').content = color;
+    document.body.style.background = color;
+    fx.restyle();
+  }
+  function buildSwatches() {
+    const wrap = $('#swatches');
+    wrap.innerHTML = '';
+    const add = (id, label, thumbHTML) => {
+      const b = document.createElement('button');
+      b.className = 'swatch'; b.dataset.theme = id;
+      b.setAttribute('aria-pressed', String(document.body.dataset.theme === id));
+      b.innerHTML = thumbHTML + '<span></span>';
+      b.lastElementChild.textContent = label;
+      wrap.appendChild(b);
+    };
+    THEMES.forEach(([id, label]) => add(id, label, '<div class="thumb"><span class="bg-' + id + '"></span></div>'));
+    if (photo) {
+      add('photo', 'Your photo', '<div class="thumb"><span class="bg-photo"></span></div>');
+      wrap.lastElementChild.querySelector('.thumb > span').style.backgroundImage = 'url("' + photo + '")';
+    } else {
+      add('photo', 'Your photo', '<div class="thumb empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></div>');
+    }
+    $('#changePhoto').hidden = !photo;
+
+    const chips = $('#fxChips');
+    chips.innerHTML = '';
+    FX.forEach(([id, label]) => {
+      const c = document.createElement('button');
+      c.className = 'chip'; c.dataset.fx = id; c.textContent = label;
+      c.setAttribute('aria-pressed', String(settings.fx === id));
+      chips.appendChild(c);
+    });
+  }
+  $('#fxChips').addEventListener('click', (e) => {
+    const c = e.target.closest('.chip'); if (!c) return;
+    settings.fx = c.dataset.fx; saveSettings(); fx.set(settings.fx);
+    document.querySelectorAll('#fxChips .chip').forEach((b) => b.setAttribute('aria-pressed', String(b === c)));
+  });
+  $('#swatches').addEventListener('click', (e) => {
+    const b = e.target.closest('.swatch'); if (!b) return;
+    if (b.dataset.theme === 'photo' && !photo) { $('#photoInput').click(); return; }
+    settings.theme = b.dataset.theme; saveSettings(); applyTheme(); buildSwatches();
+  });
+  $('#changePhoto').addEventListener('click', () => $('#photoInput').click());
+  $('#photoInput').addEventListener('change', async (e) => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    try {
+      const img = await loadImage(file);
+      let saved = null;
+      // try a sharp version first, then smaller ones if the phone's storage refuses it
+      for (const [maxSide, quality] of [[1600, 0.82], [1100, 0.75], [800, 0.7]]) {
+        const data = shrink(img, maxSide, quality);
+        if (store.set('catgirls.photo', data)) { saved = data; break; }
+      }
+      if (!saved) { toast('That photo is too big to save. Try another one.'); return; }
+      photo = saved; settings.theme = 'photo'; saveSettings(); applyTheme(); buildSwatches();
+    } catch { toast('Could not open that photo.'); }
+  });
+  function loadImage(file) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('bad image')); };
+      img.src = url;
+    });
+  }
+  function shrink(img, maxSide, quality) {
+    const scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(img.naturalWidth * scale));
+    c.height = Math.max(1, Math.round(img.naturalHeight * scale));
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    return c.toDataURL('image/jpeg', quality);
+  }
+
+  // ---------- settings ----------
+  function buildSettings() {
+    const rows = [
+      { key: 'focus', label: 'Focus', unit: 'min' },
+      { key: 'short', label: 'Short break', unit: 'min' },
+      { key: 'long', label: 'Long break', unit: 'min' },
+      { key: 'every', label: 'Long break after', unit: 'sessions' },
+      { key: 'cheer', label: 'Encouragement', hint: 'A cat girl pep talk when a timer finishes', toggle: true },
+      { key: 'sound', label: 'Meow', hint: 'Play a meow when time is up', toggle: true },
+      { key: 'auto', label: 'Auto-start', hint: 'Start the next timer by itself', toggle: true },
+    ];
+    if ('wakeLock' in navigator) rows.push({ key: 'awake', label: 'Keep screen on', hint: 'While a timer is running', toggle: true });
+    if ('Notification' in window && !isIOS) rows.push({ key: 'notify', label: 'Notifications', hint: 'When this window is in the background', toggle: true });
+
+    const wrap = $('#settingsRows');
+    wrap.innerHTML = '';
+    for (const r of rows) {
+      const row = document.createElement('div'); row.className = 'row';
+      const label = document.createElement('div'); label.className = 'label'; label.textContent = r.label;
+      if (r.hint) { const h = document.createElement('span'); h.className = 'hint'; h.textContent = r.hint; label.appendChild(h); }
+      row.appendChild(label);
+      if (r.toggle) {
+        const sw = document.createElement('button');
+        sw.className = 'switch'; sw.dataset.key = r.key; sw.setAttribute('role', 'switch');
+        sw.setAttribute('aria-label', r.label); sw.setAttribute('aria-checked', String(!!settings[r.key]));
+        row.appendChild(sw);
+      } else {
+        const st = document.createElement('div'); st.className = 'stepper';
+        st.innerHTML = '<button data-step="-1" aria-label="Less">−</button><output></output><button data-step="1" aria-label="More">+</button>';
+        st.dataset.key = r.key; st.dataset.unit = r.unit;
+        st.querySelector('output').textContent = settings[r.key] + ' ' + (r.unit === 'min' ? 'min' : '');
+        if (r.unit !== 'min') st.querySelector('output').textContent = String(settings[r.key]);
+        row.appendChild(st);
+      }
+      wrap.appendChild(row);
+    }
+    $('#installNote').hidden = !(isIOS && !isStandalone);
+  }
+  $('#settingsRows').addEventListener('click', async (e) => {
+    const step = e.target.closest('[data-step]');
+    const sw = e.target.closest('.switch');
+    if (step) {
+      const st = step.parentElement, key = st.dataset.key, [lo, hi] = LIMITS[key];
+      settings[key] = Math.min(hi, Math.max(lo, settings[key] + Number(step.dataset.step)));
+      st.querySelector('output').textContent = st.dataset.unit === 'min' ? settings[key] + ' min' : String(settings[key]);
+      if (key === state.mode && !state.running) state.remaining = null;
+      saveSettings(); saveState(); render();
+    } else if (sw) {
+      const key = sw.dataset.key;
+      let on = !settings[key];
+      if (key === 'notify' && on) {
+        const perm = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
+        if (perm !== 'granted') { on = false; toast('Notifications are blocked for this page.'); }
+      }
+      settings[key] = on;
+      sw.setAttribute('aria-checked', String(on));
+      saveSettings();
+      if (key === 'sound' && on) { unlockAudio(); playMeow(); }
+      if (key === 'awake') syncWake();
+    }
+  });
+
+  // ---------- sheets & toast ----------
+  const backdrop = $('#backdrop');
+  let openSheet = null, lastFocus = null;
+  function show(sheet) {
+    lastFocus = document.activeElement;
+    openSheet = sheet; sheet.classList.add('open'); backdrop.classList.add('open');
+    sheet.querySelector('[data-close]').focus({ preventScroll: true });
+  }
+  function hide() {
+    if (!openSheet) return;
+    openSheet.classList.remove('open'); backdrop.classList.remove('open'); openSheet = null;
+    if (lastFocus && lastFocus.focus) lastFocus.focus({ preventScroll: true });
+  }
+  backdrop.addEventListener('click', hide);
+  document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', hide));
+  $('#openBg').addEventListener('click', () => { buildSwatches(); show($('#bgSheet')); });
+  $('#openSettings').addEventListener('click', () => { buildSettings(); show($('#settingsSheet')); });
+
+  let toastTimer = 0;
+  function toast(msg) {
+    const t = $('#toast'); t.textContent = msg; t.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 3200);
+  }
+
+  // ---------- controls ----------
+  el.toggle.addEventListener('click', () => (state.running ? pause() : start()));
+  $('#reset').addEventListener('click', reset);
+  $('#skip').addEventListener('click', () => advance(false));
+  document.querySelector('.tabs').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-mode]'); if (b) setMode(b.dataset.mode);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { hide(); return; }
+    if (e.code === 'Space' && !openSheet && !e.target.closest('button, input')) {
+      e.preventDefault(); state.running ? pause() : start();
+    }
+  });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) { tick(); render(); syncWake(); } });
+  window.addEventListener('pageshow', () => { tick(); render(); });
+
+  // ---------- go ----------
+  applyTheme();
+  fx.set(settings.fx);
+  render();
+  tick();
+  setInterval(tick, 250);
+  syncWake();
+
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  }
+})();
+</script>
+</body>
+</html>
