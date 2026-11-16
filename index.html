@@ -808,16 +808,37 @@
   }
 
   // ---------- sound, notifications, screen wake ----------
-  // iPhone only lets a page start sound from inside a tap. So the sound system is woken
-  // on every tap (not just Start), and a silent blip is played once to fully unlock it.
-  // The 'ambient' audio session keeps the bell quiet when the phone is on silent.
-  let audio = null, bellBus = null, bellClick = null;
+  // How the bell gets played on iPhone:
+  // - When the app opens, the bell is recorded into a few short clips (each one jingles a
+  //   little differently), so nothing has to be generated at the moment time runs out.
+  // - The clips play through one ordinary audio player. iPhone plays that kind of sound even
+  //   when the phone is on silent, and once the player has been started by a tap it stays
+  //   allowed to play later without another tap, so every timer can ring, not only the first.
+  // - The live sound engine is kept as a backup for browsers where the player fails.
+  let audio = null, bellReady = false, nextClip = 0, playerUnlocked = false, unlocking = false;
+  const bellClips = [];
+  const player = new Audio();
+  player.setAttribute('playsinline', '');
+  player.preload = 'auto';
+
   function unlockAudio() {
+    // Start the player once from inside a tap, muted and on a moment of silence, so iPhone
+    // trusts it from then on. Being muted, it doesn't pause any music you're listening to.
+    if (!playerUnlocked && !unlocking) {
+      unlocking = true;
+      try {
+        player.muted = true;
+        player.src = SILENCE;
+        const p = player.play();
+        const done = () => { player.pause(); player.muted = false; playerUnlocked = true; unlocking = false; };
+        const fail = () => { player.muted = false; unlocking = false; };
+        if (p && p.then) p.then(done, fail); else done();
+      } catch { player.muted = false; unlocking = false; }
+    }
+    // Backup engine: wake it on every tap too.
     try {
-      if ('audioSession' in navigator) navigator.audioSession.type = 'ambient';
       if (!audio || audio.state === 'closed') {
         audio = new (window.AudioContext || window.webkitAudioContext)();
-        buildBellChain(audio);
         const blip = audio.createBufferSource();
         blip.buffer = audio.createBuffer(1, 1, 22050);
         blip.connect(audio.destination); blip.start(0);
@@ -825,7 +846,7 @@
       if (audio.state !== 'running') audio.resume();
     } catch { /* no audio available */ }
   }
-  ['pointerdown', 'touchend', 'keydown'].forEach((type) =>
+  ['pointerdown', 'touchend', 'click', 'keydown'].forEach((type) =>
     document.addEventListener(type, unlockAudio, { capture: true, passive: true }));
 
   // The sound when a timer finishes: a soft cat collar bell jingling as a cat scratches its
@@ -834,9 +855,11 @@
     pitch: 2750,    // main ring of the bell's shell, in Hz (higher = smaller bell)
     volume: 0.29,   // overall loudness, 0 to 1
     scratches: 7,   // how many jingle-jingles in the ear scratch
+    clips: 4,       // how many different takes to record when the app opens
   };
   // Shared effects: cut the low rumble, take the edge off the very top, add a small room echo.
-  function buildBellChain(ctx) {
+  // Returns where the bell sounds get played into.
+  function bellChain(ctx) {
     const len = Math.floor(ctx.sampleRate * 0.9), ir = ctx.createBuffer(2, len, ctx.sampleRate);
     for (let c = 0; c < 2; c++) {
       const d = ir.getChannelData(c);
@@ -846,12 +869,13 @@
     const roomLevel = ctx.createGain(); roomLevel.gain.value = 0.18;
     const lowCut = ctx.createBiquadFilter(); lowCut.type = 'highpass'; lowCut.frequency.value = 1200;
     const topSoften = ctx.createBiquadFilter(); topSoften.type = 'highshelf'; topSoften.frequency.value = 7000; topSoften.gain.value = -6;
-    bellBus = ctx.createGain();
-    bellBus.connect(lowCut); lowCut.connect(topSoften);
+    const bus = ctx.createGain();
+    bus.connect(lowCut); lowCut.connect(topSoften);
     topSoften.connect(ctx.destination); topSoften.connect(room); room.connect(roomLevel); roomLevel.connect(ctx.destination);
-    bellClick = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.006), ctx.sampleRate);
-    const cd = bellClick.getChannelData(0);
+    const click = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.006), ctx.sampleRate);
+    const cd = click.getChannelData(0);
     for (let i = 0; i < cd.length; i++) cd[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / cd.length, 2);
+    return { ctx, bus, click };
   }
   const rnd = (a, b) => a + Math.random() * (b - a);
   // The shell's ringing notes (ratio to `pitch`, how long each rings). Real bells are not
@@ -859,9 +883,9 @@
   const SHELL = [[1, 0.55], [1.52, 0.42], [2.23, 0.3], [2.71, 0.24], [3.36, 0.15], [4.08, 0.1]];
   // One knock of the little ball against the shell. Every knock lands somewhere different,
   // so the notes get random strengths each time and no two jingles sound quite the same.
-  function bellHit(ctx, t, v, pan) {
-    let out = bellBus;
-    if (ctx.createStereoPanner) { out = ctx.createStereoPanner(); out.pan.value = pan; out.connect(bellBus); }
+  function bellHit({ ctx, bus, click }, t, v, pan) {
+    let out = bus;
+    if (ctx.createStereoPanner) { out = ctx.createStereoPanner(); out.pan.value = pan; out.connect(bus); }
     for (const [ratio, ring] of SHELL) {
       const amp = v * rnd(0.15, 1) / (1 + ratio * 0.35);
       for (const detune of [1, 1 + rnd(0.003, 0.009)]) {
@@ -874,32 +898,81 @@
       }
     }
     const tick = ctx.createBufferSource(), band = ctx.createBiquadFilter(), tickLevel = ctx.createGain();
-    tick.buffer = bellClick; tick.playbackRate.value = rnd(0.8, 1.3);
+    tick.buffer = click; tick.playbackRate.value = rnd(0.8, 1.3);
     band.type = 'bandpass'; band.frequency.value = rnd(6000, 9000); band.Q.value = 1.2;
     tickLevel.gain.value = v * 0.6;
     tick.connect(band); band.connect(tickLevel); tickLevel.connect(out); tick.start(t);
   }
   // One shake: the ball bounces a few times, each bounce quieter and a little later.
-  function bellRattle(ctx, t, v) {
+  function bellRattle(chain, t, v) {
     const pan = rnd(-0.25, 0.25);
     let at = t, amp = 1;
     for (let i = 0, n = Math.round(rnd(3.6, 5.6)); i < n; i++) {
-      bellHit(ctx, at, v * amp, pan);
+      bellHit(chain, at, v * amp, pan);
       at += rnd(0.014, 0.05) * (1 + i * 0.15);
       amp *= rnd(0.45, 0.8);
     }
   }
-  function earScratch(ctx, t) {
+  function earScratch(chain, t) {
     for (let i = 0; i < BELL.scratches; i++) {
-      bellRattle(ctx, t + i * rnd(0.085, 0.1), BELL.volume * (i === 0 ? 0.8 : rnd(0.45, 0.7)));
+      bellRattle(chain, t + i * rnd(0.085, 0.1), BELL.volume * (i === 0 ? 0.8 : rnd(0.45, 0.7)));
     }
   }
-  function playBell() {
-    if (!settings.sound || !audio) return;
-    const go = () => { try { earScratch(audio, audio.currentTime + 0.05); } catch { /* ignore */ } };
-    // After the app was in the background the sound system may be paused; wake it first.
+
+  // Turn recorded sound into a .wav file the player can play (16-bit).
+  function toWav(channels, rate) {
+    const frames = channels[0].length, n = channels.length;
+    const buf = new ArrayBuffer(44 + frames * n * 2), v = new DataView(buf);
+    const text = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+    text(0, 'RIFF'); v.setUint32(4, 36 + frames * n * 2, true); text(8, 'WAVE');
+    text(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, n, true);
+    v.setUint32(24, rate, true); v.setUint32(28, rate * n * 2, true); v.setUint16(32, n * 2, true); v.setUint16(34, 16, true);
+    text(36, 'data'); v.setUint32(40, frames * n * 2, true);
+    let o = 44;
+    for (let i = 0; i < frames; i++) for (let c = 0; c < n; c++, o += 2) {
+      const s = Math.max(-1, Math.min(1, channels[c][i]));
+      v.setInt16(o, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+    }
+    return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+  }
+  const SILENCE = toWav([new Float32Array(2205)], 22050);
+  // Record the takes in the background when the app opens (takes a fraction of a second).
+  async function recordBellClips() {
+    const Offline = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    if (!Offline) return;
+    const rate = 44100;
+    for (let k = 0; k < BELL.clips; k++) {
+      try {
+        const ctx = new Offline(2, Math.floor(rate * 2), rate);
+        earScratch(bellChain(ctx), 0.02);
+        const out = await new Promise((resolve, reject) => {
+          ctx.oncomplete = (e) => resolve(e.renderedBuffer);
+          const p = ctx.startRendering();
+          if (p && p.then) p.then(resolve, reject);
+        });
+        bellClips.push(toWav([out.getChannelData(0), out.getChannelData(1)], rate));
+      } catch { break; }
+    }
+    bellReady = bellClips.length > 0;
+  }
+  recordBellClips();
+
+  function playBellLive() {
+    if (!audio) return;
+    const go = () => { try { earScratch(bellChain(audio), audio.currentTime + 0.05); } catch { /* ignore */ } };
     if (audio.state === 'running') go();
     else audio.resume().then(go, () => {});
+  }
+  function playBell() {
+    if (!settings.sound) return;
+    if (!bellReady) { playBellLive(); return; }
+    try {
+      player.muted = false;
+      player.src = bellClips[nextClip];
+      nextClip = (nextClip + 1) % bellClips.length;
+      const p = player.play();
+      if (p && p.then) p.then(() => { playerUnlocked = true; }, playBellLive);
+    } catch { playBellLive(); }
   }
   async function notify(title, body) {
     if (!settings.notify || !('Notification' in window) || Notification.permission !== 'granted' || !document.hidden) return;
