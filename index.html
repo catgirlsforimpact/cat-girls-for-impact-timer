@@ -854,7 +854,9 @@
   const BELL = {
     pitch: 2750,    // main ring of the bell's shell, in Hz (higher = smaller bell)
     volume: 0.29,   // overall loudness, 0 to 1
-    scratches: 7,   // how many jingle-jingles in the ear scratch
+    scratches: 6,   // how many jingle-jingles in the ear scratch
+    gap: 0.15,      // seconds between jingles (bigger = slower, more relaxed)
+    loose: 1.1,     // how loosely the little ball bounces inside (bigger = slower rattle)
     clips: 4,       // how many different takes to record when the app opens
   };
   // Shared effects: cut the low rumble, take the edge off the very top, add a small room echo.
@@ -909,13 +911,13 @@
     let at = t, amp = 1;
     for (let i = 0, n = Math.round(rnd(3.6, 5.6)); i < n; i++) {
       bellHit(chain, at, v * amp, pan);
-      at += rnd(0.014, 0.05) * (1 + i * 0.15);
+      at += rnd(0.014, 0.05) * (1 + i * 0.15) * BELL.loose;
       amp *= rnd(0.45, 0.8);
     }
   }
   function earScratch(chain, t) {
     for (let i = 0; i < BELL.scratches; i++) {
-      bellRattle(chain, t + i * rnd(0.085, 0.1), BELL.volume * (i === 0 ? 0.8 : rnd(0.45, 0.7)));
+      bellRattle(chain, t + i * BELL.gap * rnd(0.92, 1.08), BELL.volume * (i === 0 ? 0.8 : rnd(0.45, 0.7)));
     }
   }
 
@@ -943,7 +945,7 @@
     const rate = 44100;
     for (let k = 0; k < BELL.clips; k++) {
       try {
-        const ctx = new Offline(2, Math.floor(rate * 2), rate);
+        const ctx = new Offline(2, Math.floor(rate * 2.8), rate);
         earScratch(bellChain(ctx), 0.02);
         const out = await new Promise((resolve, reject) => {
           ctx.oncomplete = (e) => resolve(e.renderedBuffer);

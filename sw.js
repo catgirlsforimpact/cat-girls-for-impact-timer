@@ -1,5 +1,5 @@
 // Keeps a copy of the app on the device so it opens without a connection.
-const CACHE = 'catgirls-timer-v21';
+const CACHE = 'catgirls-timer-v22';
 const ASSETS = [
   './',
   'index.html',
