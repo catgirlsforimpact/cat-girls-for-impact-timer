@@ -720,7 +720,7 @@
     state.cheer = line ? line.text : '';
     state.cheerBy = line ? line.by : '';
     if (finished) {
-      playMeow();
+      playBell();
       notify(was === 'focus' ? 'Focus session done' : 'Break is over',
              line ? (line.by ? '“' + line.text + '” — ' + line.by : line.text)
                   : (was === 'focus' ? 'Time for a ' + MODES[state.mode].toLowerCase() + '.' : 'Ready for another focus session?'));
@@ -808,59 +808,98 @@
   }
 
   // ---------- sound, notifications, screen wake ----------
-  let audio = null;
+  // iPhone only lets a page start sound from inside a tap. So the sound system is woken
+  // on every tap (not just Start), and a silent blip is played once to fully unlock it.
+  // The 'ambient' audio session keeps the bell quiet when the phone is on silent.
+  let audio = null, bellBus = null, bellClick = null;
   function unlockAudio() {
     try {
-      audio = audio || new (window.AudioContext || window.webkitAudioContext)();
-      if (audio.state === 'suspended') audio.resume();
+      if ('audioSession' in navigator) navigator.audioSession.type = 'ambient';
+      if (!audio || audio.state === 'closed') {
+        audio = new (window.AudioContext || window.webkitAudioContext)();
+        buildBellChain(audio);
+        const blip = audio.createBufferSource();
+        blip.buffer = audio.createBuffer(1, 1, 22050);
+        blip.connect(audio.destination); blip.start(0);
+      }
+      if (audio.state !== 'running') audio.resume();
     } catch { /* no audio available */ }
   }
-  // The sound when a timer finishes: a short synthesized kitten mew, so no sound file is
-  // needed offline. These four numbers are the whole recipe; change them to retune it.
-  const MEOW = {
-    pitch: 1500,   // highest note of the mew, in Hz
-    length: 0.3,   // seconds
-    soft: 0.85,    // 0 = buzzy, 1 = soft and round
-    twice: false,  // play it two times in a row
+  ['pointerdown', 'touchend', 'keydown'].forEach((type) =>
+    document.addEventListener(type, unlockAudio, { capture: true, passive: true }));
+
+  // The sound when a timer finishes: a soft cat collar bell jingling as a cat scratches its
+  // ear. It is synthesized, so no sound file is needed offline. Change these to retune it.
+  const BELL = {
+    pitch: 2750,    // main ring of the bell's shell, in Hz (higher = smaller bell)
+    volume: 0.29,   // overall loudness, 0 to 1
+    scratches: 7,   // how many jingle-jingles in the ear scratch
   };
-  // One mew: the note chirps up to `pitch` and falls away, while a filter closes over it
-  // so the sound goes from a bright "ee" to a rounder "oo".
-  function meow(ctx, at, { pitch, length, soft }) {
-    const buzzy = ctx.createOscillator(), round = ctx.createOscillator();
-    buzzy.type = 'sawtooth'; round.type = 'triangle';
-    for (const osc of [buzzy, round]) {
-      osc.frequency.setValueAtTime(pitch * 0.75, at);
-      osc.frequency.linearRampToValueAtTime(pitch, at + length * 0.3);
-      osc.frequency.exponentialRampToValueAtTime(pitch * 0.62, at + length);
+  // Shared effects: cut the low rumble, take the edge off the very top, add a small room echo.
+  function buildBellChain(ctx) {
+    const len = Math.floor(ctx.sampleRate * 0.9), ir = ctx.createBuffer(2, len, ctx.sampleRate);
+    for (let c = 0; c < 2; c++) {
+      const d = ir.getChannelData(c);
+      for (let i = Math.floor(ctx.sampleRate * 0.008); i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 5);
     }
-    const buzzyLevel = ctx.createGain(), roundLevel = ctx.createGain();
-    buzzyLevel.gain.value = (1 - soft) * 0.5;
-    roundLevel.gain.value = soft;
-
-    const mouth = ctx.createBiquadFilter();
-    mouth.type = 'lowpass'; mouth.Q.value = 3;
-    mouth.frequency.setValueAtTime(pitch * 4, at);
-    mouth.frequency.exponentialRampToValueAtTime(pitch * 1.3, at + length);
-
-    const out = ctx.createGain();
-    out.gain.setValueAtTime(0.0001, at);
-    out.gain.exponentialRampToValueAtTime(0.5, at + 0.025);
-    out.gain.setValueAtTime(0.5, at + length * 0.45);
-    out.gain.linearRampToValueAtTime(0.0001, at + length);
-
-    buzzy.connect(buzzyLevel).connect(mouth);
-    round.connect(roundLevel).connect(mouth);
-    mouth.connect(out).connect(ctx.destination);
-    for (const osc of [buzzy, round]) { osc.start(at); osc.stop(at + length + 0.05); }
+    const room = ctx.createConvolver(); room.buffer = ir;
+    const roomLevel = ctx.createGain(); roomLevel.gain.value = 0.18;
+    const lowCut = ctx.createBiquadFilter(); lowCut.type = 'highpass'; lowCut.frequency.value = 1200;
+    const topSoften = ctx.createBiquadFilter(); topSoften.type = 'highshelf'; topSoften.frequency.value = 7000; topSoften.gain.value = -6;
+    bellBus = ctx.createGain();
+    bellBus.connect(lowCut); lowCut.connect(topSoften);
+    topSoften.connect(ctx.destination); topSoften.connect(room); room.connect(roomLevel); roomLevel.connect(ctx.destination);
+    bellClick = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.006), ctx.sampleRate);
+    const cd = bellClick.getChannelData(0);
+    for (let i = 0; i < cd.length; i++) cd[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / cd.length, 2);
   }
-  function playMeow() {
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  // The shell's ringing notes (ratio to `pitch`, how long each rings). Real bells are not
+  // perfectly round, so each note is doubled slightly out of tune, which makes it shimmer.
+  const SHELL = [[1, 0.55], [1.52, 0.42], [2.23, 0.3], [2.71, 0.24], [3.36, 0.15], [4.08, 0.1]];
+  // One knock of the little ball against the shell. Every knock lands somewhere different,
+  // so the notes get random strengths each time and no two jingles sound quite the same.
+  function bellHit(ctx, t, v, pan) {
+    let out = bellBus;
+    if (ctx.createStereoPanner) { out = ctx.createStereoPanner(); out.pan.value = pan; out.connect(bellBus); }
+    for (const [ratio, ring] of SHELL) {
+      const amp = v * rnd(0.15, 1) / (1 + ratio * 0.35);
+      for (const detune of [1, 1 + rnd(0.003, 0.009)]) {
+        const osc = ctx.createOscillator(), env = ctx.createGain(), len = ring * rnd(0.75, 1.2);
+        osc.type = 'sine'; osc.frequency.value = BELL.pitch * ratio * detune;
+        env.gain.setValueAtTime(0.0001, t);
+        env.gain.exponentialRampToValueAtTime(amp * 0.5, t + 0.0015);
+        env.gain.exponentialRampToValueAtTime(0.0001, t + len);
+        osc.connect(env); env.connect(out); osc.start(t); osc.stop(t + len + 0.02);
+      }
+    }
+    const tick = ctx.createBufferSource(), band = ctx.createBiquadFilter(), tickLevel = ctx.createGain();
+    tick.buffer = bellClick; tick.playbackRate.value = rnd(0.8, 1.3);
+    band.type = 'bandpass'; band.frequency.value = rnd(6000, 9000); band.Q.value = 1.2;
+    tickLevel.gain.value = v * 0.6;
+    tick.connect(band); band.connect(tickLevel); tickLevel.connect(out); tick.start(t);
+  }
+  // One shake: the ball bounces a few times, each bounce quieter and a little later.
+  function bellRattle(ctx, t, v) {
+    const pan = rnd(-0.25, 0.25);
+    let at = t, amp = 1;
+    for (let i = 0, n = Math.round(rnd(3.6, 5.6)); i < n; i++) {
+      bellHit(ctx, at, v * amp, pan);
+      at += rnd(0.014, 0.05) * (1 + i * 0.15);
+      amp *= rnd(0.45, 0.8);
+    }
+  }
+  function earScratch(ctx, t) {
+    for (let i = 0; i < BELL.scratches; i++) {
+      bellRattle(ctx, t + i * rnd(0.085, 0.1), BELL.volume * (i === 0 ? 0.8 : rnd(0.45, 0.7)));
+    }
+  }
+  function playBell() {
     if (!settings.sound || !audio) return;
-    try {
-      if (audio.state === 'suspended') audio.resume();
-      const at = audio.currentTime + 0.05;
-      meow(audio, at, MEOW);
-      if (MEOW.twice) meow(audio, at + MEOW.length + 0.12, MEOW);
-    } catch { /* ignore */ }
+    const go = () => { try { earScratch(audio, audio.currentTime + 0.05); } catch { /* ignore */ } };
+    // After the app was in the background the sound system may be paused; wake it first.
+    if (audio.state === 'running') go();
+    else audio.resume().then(go, () => {});
   }
   async function notify(title, body) {
     if (!settings.notify || !('Notification' in window) || Notification.permission !== 'granted' || !document.hidden) return;
@@ -1116,7 +1155,7 @@
       { key: 'long', label: 'Long break', unit: 'min' },
       { key: 'every', label: 'Long break after', unit: 'sessions' },
       { key: 'cheer', label: 'Encouragement', hint: 'A cat girl pep talk when a timer finishes', toggle: true },
-      { key: 'sound', label: 'Meow', hint: 'Play a meow when time is up', toggle: true },
+      { key: 'sound', label: 'Cat bell', hint: 'Jingle a soft cat bell when time is up', toggle: true },
       { key: 'auto', label: 'Auto-start', hint: 'Start the next timer by itself', toggle: true },
     ];
     if ('wakeLock' in navigator) rows.push({ key: 'awake', label: 'Keep screen on', hint: 'While a timer is running', toggle: true });
@@ -1165,7 +1204,7 @@
       settings[key] = on;
       sw.setAttribute('aria-checked', String(on));
       saveSettings();
-      if (key === 'sound' && on) { unlockAudio(); playMeow(); }
+      if (key === 'sound' && on) { unlockAudio(); playBell(); }
       if (key === 'awake') syncWake();
     }
   });
