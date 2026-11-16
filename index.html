@@ -52,7 +52,7 @@
   body {
     font-family: var(--font);
     color: var(--ink);
-    background: #e3d6ff;
+    background: #bfaef5;
     overflow: hidden;
     overscroll-behavior: none;
     -webkit-user-select: none; user-select: none;
@@ -63,7 +63,8 @@
   [hidden] { display: none !important; }
 
   /* ---------- backgrounds ---------- */
-  .bg { position: fixed; inset: 0; z-index: 0; transition: opacity .3s; }
+  /* min-height: 100lvh lets the background reach under the iPhone home bar and Safari's toolbar */
+  .bg { position: fixed; inset: 0; min-height: 100lvh; z-index: 0; transition: opacity .3s; }
   .bg-peach { background: linear-gradient(160deg, #fff3e8 0%, #ffd9c4 55%, #ffb9a8 100%); }
   .bg-strawberry {
     background-color: #ffcfdc;
@@ -489,16 +490,18 @@
     },
   };
 
+  // [id, name, top colour (browser bar), bottom colour (behind the iPhone home bar / Safari toolbar)]
+  // The bottom colour is where each background gradient ends, so the bar blends into it.
   const THEMES = [
-    ['lavender', 'Lavender', '#e3d6ff'],
-    ['grape', 'Grape soda', '#b59cf5'],
-    ['gingham', 'Lilac picnic', '#e2d6fa'],
-    ['night', 'Starry night', '#1d1b3f'],
-    ['strawberry', 'Strawberry', '#ffcfdc'],
-    ['sky', 'Cloudy sky', '#a9daff'],
-    ['sunset', 'Sunset', '#ffb39c'],
-    ['matcha', 'Matcha', '#dcefd0'],
-    ['peach', 'Peach', '#ffe1d2'],
+    ['lavender', 'Lavender', '#e3d6ff', '#bfaef5'],
+    ['grape', 'Grape soda', '#b59cf5', '#8566dc'],
+    ['gingham', 'Lilac picnic', '#e2d6fa', '#e2d6fa'],
+    ['night', 'Starry night', '#1d1b3f', '#3b2f6c'],
+    ['strawberry', 'Strawberry', '#ffcfdc', '#ffcfdc'],
+    ['sky', 'Cloudy sky', '#a9daff', '#d9f0ff'],
+    ['sunset', 'Sunset', '#ffb39c', '#b796ff'],
+    ['matcha', 'Matcha', '#dcefd0', '#a8d6a6'],
+    ['peach', 'Peach', '#ffe1d2', '#ffb9a8'],
   ];
   const HEART = 'M50 84C24 64 10 48 10 33C10 19 20 11 31 11C39 11 46 15 50 22C54 15 61 11 69 11C80 11 90 19 90 33C90 48 76 64 50 84Z';
   const APP_NAME = 'Cat Girls for Impact Timer';
@@ -1023,9 +1026,12 @@
     document.body.dataset.theme = id;
     el.bg.className = 'bg bg-' + id;
     el.bg.style.backgroundImage = id === 'photo' ? 'url("' + photo + '")' : '';
-    const color = id === 'photo' ? '#3a3336' : THEMES.find((t) => t[0] === id)[2];
-    document.querySelector('meta[name="theme-color"]').content = color;
-    document.body.style.background = color;
+    const theme = THEMES.find((t) => t[0] === id);
+    const top = theme ? theme[2] : '#3a3336';
+    const bottom = theme ? theme[3] : '#3a3336';
+    document.querySelector('meta[name="theme-color"]').content = top;
+    document.documentElement.style.background = bottom;
+    document.body.style.background = bottom;
     fx.restyle();
   }
   function buildSwatches() {
